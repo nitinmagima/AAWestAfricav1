@@ -176,7 +176,7 @@ if data_dict:
             st.write("")
             st.markdown("---")
             st.write("")
-            st.subheader("Return Period Analysis for Bad Rainfall Years Across Selected Regions")
+            st.header("Return Period Analysis for Bad Rainfall Years Across Selected Regions")
 
             # Allow user to select frequency percentage (5%, 10%, 20%)
             st.markdown("**Select the percentage of lowest rainfall years to be considered as 'Bad Years'.**")
@@ -218,7 +218,7 @@ if data_dict:
                 styled_freq_df = freq_formatted_df.style.map(lambda x: highlight_bad_years(x), subset=selected_regions)
 
                 # Display the formatted table
-                st.markdown(f"### Detected Bad Years Based on {freq_percentage}% For Selected Regions")
+                st.subheader(f"Detected Bad Years Based on {freq_percentage}% For Selected Regions")
                 st.dataframe(styled_freq_df.format({"Year": "{:.0f}"}))  # Ensure Year column has no comma formatting
 
                 # 📥 Add download button for CSV
