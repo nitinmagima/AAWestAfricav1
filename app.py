@@ -218,7 +218,7 @@ if data_dict:
                 styled_freq_df = freq_formatted_df.style.map(lambda x: highlight_bad_years(x), subset=selected_regions)
 
                 # Display the formatted table
-                st.subheader(f"Detected Bad Years Based on {freq_percentage}%")
+                st.subheader(f"Detected Bad Years Based on {freq_percentage}% For Selected Regions")
                 st.dataframe(styled_freq_df.format({"Year": "{:.0f}"}))  # Ensure Year column has no comma formatting
 
                 # 📥 Add download button for CSV
