@@ -163,7 +163,7 @@ if data_dict:
                 styled_df = formatted_df.style.map(lambda x: highlight_bad_years(x), subset=selected_regions)
 
                 # Display the table
-                st.subheader("⚠️ Bad Years Detected Based on Rainfall Hindcast Baseline Selection")
+                st.subheader("Bad Years Detected Based on Rainfall Hindcast Baseline Selection")
                 st.dataframe(styled_df.format({"Year": "{:.0f}"}))  # Ensure Year column has no comma formatting
 
 
@@ -181,7 +181,7 @@ if data_dict:
             # Allow user to select frequency percentage (5%, 10%, 20%)
             st.markdown("**Select the percentage of lowest rainfall years to be considered as 'Bad Years'.**")
             freq_percentage = st.slider(
-                "Select Frequency (5%, 10%, 20%) of Bad Years",
+                "Select Frequency (e.g, 5%, 10%, 20%) of Bad Years",
                 min_value=5,
                 max_value=50,
                 step=5,
