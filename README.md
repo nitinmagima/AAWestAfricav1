@@ -15,6 +15,7 @@ This **Streamlit web app** allows users to **analyze and compare hindcast rainfa
 ✅ **Hindcast Rainfall Threshold Slider** – Identify years with low rainfall.  
 ✅ **Interactive Plotly Charts** – Zoom, pan, and hover for details.  
 ✅ **Formatted Bad Years Table** – Years below the threshold are marked.  
+✅ **Frequency-Based Bad Year Selection** – Sorts rainfall values and allows users to select the lowest X% of years.
 ✅ **CSV Download Option** – Export bad years for further analysis.  
 
 ---

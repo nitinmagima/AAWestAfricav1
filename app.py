@@ -47,10 +47,10 @@ def load_data(country, season, base_folder):
                 place_name = file.replace("mean_data.csv", "").replace(".csv", "").replace("_", " ").strip()
                 df = pd.read_csv(file_path, header=None)
 
-                # 🟢 Rename columns correctly
+                # Rename columns correctly
                 df.columns = ["Year", "Rainfall"]
 
-                # 🟢 Convert "Year" values: 1 → 1991, ..., 35 → 2025
+                # Convert "Year" values: 1 → 1991, ..., 35 → 2025
                 df["Year"] = pd.to_numeric(df["Year"], errors="coerce")
                 df.dropna(subset=["Year"], inplace=True)
                 df["Year"] = df["Year"].astype(int) + 1990  # Shift to correct years
@@ -85,6 +85,10 @@ if data_dict:
                               max_value=float(max_rainfall),
                               value=float(min_rainfall))
 
+        st.write("")
+        st.markdown("---")
+        st.write("")
+
         # Create a Plotly line chart for multi-region comparison
         fig = go.Figure()
 
@@ -109,11 +113,11 @@ if data_dict:
                 title="Year",
                 tickmode="array",
                 tickvals=df["Year"].tolist(),
-                tickformat="d"  # 🔹 Removes commas in years
+                tickformat="d"  #  Removes commas in years
             ),
             yaxis=dict(
                 title="Rainfall (mm)",
-                range=[min_rainfall * 0.9, max_rainfall * 1.1],  # 🔹 Adds padding without empty space
+                range=[min_rainfall * 0.9, max_rainfall * 1.1],  # Adds padding without empty space
             ),
             hovermode="x",
             template="plotly_white"
@@ -149,11 +153,14 @@ if data_dict:
 
             styled_df = formatted_df.style.map(lambda x: highlight_bad_years(x), subset=selected_regions)
 
+            st.write("")
+            st.markdown("---")
+            st.write("")
             # Display the formatted table
-            st.subheader("⚠️ Bad Years Detected Across Selected Regions")
+            st.subheader("Bad Years Detected Across Selected Regions")
             st.dataframe(styled_df.format({"Year": "{:.0f}"}))  # Ensure Year column has no comma formatting
 
-            # 📥 Add download button for CSV
+            # Add download button for CSV
             csv = formatted_df.to_csv(index=False).encode("utf-8")
             st.download_button(
                 label="📥 Download Bad Years as CSV",
@@ -163,6 +170,76 @@ if data_dict:
             )
         else:
             st.success("✅ No bad years detected below the threshold!")
+
+
+        # Function to highlight bad years
+        def highlight_bad_years(val):
+            return "background-color: orange; color: black; font-weight: bold;" if val == "Yes" else ""
+
+        if selected_regions:
+            # Frequency-Based Selection of Lowest Rainfall Values
+            st.write("")
+            st.markdown("---")
+            st.write("")
+            st.subheader("Return Period Analysis for Bad Rainfall Years Across Selected Regions")
+
+            # Allow user to select frequency percentage (5%, 10%, 20%)
+            st.markdown("**Select the percentage of lowest rainfall years to be considered as 'Bad Years'.**")
+            freq_percentage = st.slider(
+                "Select Frequency (5%, 10%, 20%) of Bad Years",
+                min_value=5,
+                max_value=50,
+                step=5,
+                value=10,
+                help="Choose the percentage of lowest rainfall years to analyze as 'Bad Years'. "
+                     "For example, selecting 10% means the bottom 10% of rainfall years will be marked."
+            )
+
+            # Collect lowest rainfall values based on frequency
+            freq_bad_years_dict = {}
+
+            for region in selected_regions:
+                df = data_dict[region].copy()
+                df_sorted = df.sort_values(by="Rainfall")  # Sort by lowest rainfall
+                num_values = int(len(df_sorted) * (freq_percentage / 100))  # Select lowest X%
+                freq_bad_years = df_sorted.head(num_values)["Year"].tolist()
+
+                for year in freq_bad_years:
+                    if year not in freq_bad_years_dict:
+                        freq_bad_years_dict[year] = {}
+                    freq_bad_years_dict[year][region] = "Yes"
+
+            # Create a structured DataFrame for frequency-based bad years
+            if freq_bad_years_dict:
+                all_freq_years = sorted(freq_bad_years_dict.keys())
+                freq_formatted_df = pd.DataFrame({"Year": all_freq_years})
+
+                # Fill "Yes" where the region had a bad year, leave empty otherwise
+                for region in selected_regions:
+                    freq_formatted_df[region] = freq_formatted_df["Year"].apply(
+                        lambda y: freq_bad_years_dict.get(y, {}).get(region, ""))
+
+                # 🔴 Apply styling to highlight the lowest values
+                styled_freq_df = freq_formatted_df.style.map(lambda x: highlight_bad_years(x), subset=selected_regions)
+
+                # Display the formatted table
+                st.subheader(f"Detected Bad Years Based on {freq_percentage}%")
+                st.dataframe(styled_freq_df.format({"Year": "{:.0f}"}))  # Ensure Year column has no comma formatting
+
+                # 📥 Add download button for CSV
+                csv_freq = freq_formatted_df.to_csv(index=False).encode("utf-8")
+                st.download_button(
+                    label=f"📥 Download Bad Years at {freq_percentage}% as CSV",
+                    data=csv_freq,
+                    file_name=f"bad_years_frequency_{freq_percentage}_{selected_season}_{selected_country}.csv",
+                    mime="text/csv"
+                )
+            else:
+                st.success(f"✅ No data found for the lowest {freq_percentage}% of rainfall values.")
+
+
+
+
 
 else:
     st.warning("⚠️ No data available for the selected country and season.")
