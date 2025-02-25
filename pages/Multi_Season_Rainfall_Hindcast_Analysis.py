@@ -102,13 +102,39 @@ if selected_regions:
         sorted_years = sorted(all_bad_years.keys())
         formatted_df = pd.DataFrame({"Year": sorted_years})
 
-        # Sort columns by region first, then add its seasons together
+        # Sort all columns alphabetically, then move 'Year' to the first position
+        sorted_columns = sorted(formatted_df.columns)
+        sorted_columns.remove("Year")  # Remove 'Year' from sorted list
+        formatted_df = formatted_df[["Year"] + sorted_columns]  # Reinsert 'Year' as first column
+
+        # Ensure 'Year' is always the first column
         column_order = ["Year"]
-        for region in selected_regions:
-            region_season_columns = sorted([col for col in formatted_df.columns if col.startswith(region)],
-                                           key=lambda x: x.split(" - ")[1])
-            column_order.extend(region_season_columns)
-        formatted_df = formatted_df[column_order]
+
+        # Step 1: Extract valid region-season columns (skip 'Year')
+        region_season_columns = [col for col in formatted_df.columns if col != "Year" and " - " in col]
+
+        # Step 2: Define season ranking for correct order
+        season_order = ["JJA", "JAS", "JJAS", "JJASO"]  # Ensure consistent sorting
+
+        # Step 3: Extract regions and their seasons properly
+        region_dict = {}
+        for col in region_season_columns:
+            parts = col.rsplit(" - ", 1)  # Split at the last " - " to avoid breaking multi-word regions
+            if len(parts) == 2:
+                region, season = parts
+                if region not in region_dict:
+                    region_dict[region] = []
+                region_dict[region].append(season)
+
+        # Step 4: Sort regions alphabetically and their seasons by defined order
+        sorted_columns = []
+        for region in sorted(region_dict.keys()):  # Sort regions alphabetically
+            sorted_seasons = sorted(region_dict[region],
+                                    key=lambda s: season_order.index(s) if s in season_order else len(season_order))
+            sorted_columns.extend([f"{region} - {season}" for season in sorted_seasons])
+
+        # Step 5: Apply the sorted column order to the DataFrame
+        formatted_df = formatted_df[column_order + sorted_columns]
 
         # Fill "Yes" for bad years across region-season combinations
         for year in all_bad_years:
