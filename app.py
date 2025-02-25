@@ -80,7 +80,7 @@ if data_dict:
         max_rainfall = max(selected_rainfall_values)
 
         # Create a slider to filter by rainfall threshold
-        threshold = st.slider("🌧️ Set Hindcast Rainfall Threshold for Bad Years",
+        threshold = st.slider("🌧️ Set Hindcast Rainfall Threshold",
                               min_value=float(min_rainfall),
                               max_value=float(max_rainfall),
                               value=float(min_rainfall))
@@ -157,7 +157,7 @@ if data_dict:
             st.markdown("---")
             st.write("")
             # Display the formatted table
-            st.subheader("Bad Years Detected Across Selected Regions")
+            st.subheader("Bad Years Across Selected Regions based on Rainfall Threshold")
             st.dataframe(styled_df.format({"Year": "{:.0f}"}))  # Ensure Year column has no comma formatting
 
             # Add download button for CSV
