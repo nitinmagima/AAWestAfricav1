@@ -79,11 +79,15 @@ if data_dict:
         min_rainfall = min(selected_rainfall_values)
         max_rainfall = max(selected_rainfall_values)
 
-        # Create a slider to filter by rainfall threshold
-        threshold = st.slider("🌧️ Set Hindcast Rainfall Threshold",
-                              min_value=float(min_rainfall),
-                              max_value=float(max_rainfall),
-                              value=float(min_rainfall))
+        # Add a toggle switch for threshold selection
+        use_threshold = st.checkbox("Enable Hindcast Threshold Selection", value=False)
+
+        # Show threshold slider only if enabled
+        if use_threshold:
+            threshold = st.slider("🌧️ Set Hindcast Rainfall Threshold",
+                                  min_value=float(min_rainfall),
+                                  max_value=float(max_rainfall),
+                                  value=float(min_rainfall))
 
         st.write("")
         st.markdown("---")
@@ -99,12 +103,13 @@ if data_dict:
                 mode="lines+markers", name=region
             ))
 
-        # Add a horizontal threshold line
-        fig.add_trace(go.Scatter(
-            x=df["Year"], y=[threshold] * len(df),
-            mode="lines", name="Threshold",
-            line=dict(color="red", dash="dash")
-        ))
+        # Add threshold line only if enabled
+        if use_threshold:
+            fig.add_trace(go.Scatter(
+                x=df["Year"], y=[threshold] * len(df),
+                mode="lines", name="Threshold",
+                line=dict(color="red", dash="dash")
+            ))
 
         # Dynamically set y-axis range based on selected regions
         fig.update_layout(
@@ -113,7 +118,7 @@ if data_dict:
                 title="Year",
                 tickmode="array",
                 tickvals=df["Year"].tolist(),
-                tickformat="d"  #  Removes commas in years
+                tickformat="d"  # Removes commas in years
             ),
             yaxis=dict(
                 title="Rainfall (mm)",
@@ -126,50 +131,40 @@ if data_dict:
         # Show the optimized interactive chart
         st.plotly_chart(fig, use_container_width=True)
 
-        bad_years_dict = {}
+        # If threshold is enabled, generate bad years table
+        if use_threshold:
+            bad_years_dict = {}
 
-        # Collect all bad years for each region
-        for region in selected_regions:
-            df = data_dict[region]
-            bad_years = df[df["Rainfall"] < threshold]["Year"].tolist()
-            for year in bad_years:
-                if year not in bad_years_dict:
-                    bad_years_dict[year] = {}
-                bad_years_dict[year][region] = "Yes"
-
-        # Create a structured DataFrame with only bad years
-        if bad_years_dict:
-            all_years = sorted(bad_years_dict.keys())
-            formatted_df = pd.DataFrame({"Year": all_years})
-
-            # Fill "Yes" where the region had a bad year, leave empty otherwise
+            # Collect all bad years for each region
             for region in selected_regions:
-                formatted_df[region] = formatted_df["Year"].apply(lambda y: bad_years_dict.get(y, {}).get(region, ""))
+                df = data_dict[region]
+                bad_years = df[df["Rainfall"] < threshold]["Year"].tolist()
+                for year in bad_years:
+                    if year not in bad_years_dict:
+                        bad_years_dict[year] = {}
+                    bad_years_dict[year][region] = "Yes"
+
+            # Create a structured DataFrame with only bad years
+            if bad_years_dict:
+                all_years = sorted(bad_years_dict.keys())
+                formatted_df = pd.DataFrame({"Year": all_years})
+
+                # Fill "Yes" where the region had a bad year, leave empty otherwise
+                for region in selected_regions:
+                    formatted_df[region] = formatted_df["Year"].apply(
+                        lambda y: bad_years_dict.get(y, {}).get(region, ""))
 
 
-            # Highlight color to Orange
-            def highlight_bad_years(val):
-                return "background-color: orange; color: black; font-weight: bold;" if val == "Yes" else ""
+                # Highlight color to Orange
+                def highlight_bad_years(val):
+                    return "background-color: orange; color: black; font-weight: bold;" if val == "Yes" else ""
 
-            styled_df = formatted_df.style.map(lambda x: highlight_bad_years(x), subset=selected_regions)
 
-            st.write("")
-            st.markdown("---")
-            st.write("")
-            # Display the formatted table
-            st.subheader("Bad Years Across Selected Regions based on Rainfall Threshold")
-            st.dataframe(styled_df.format({"Year": "{:.0f}"}))  # Ensure Year column has no comma formatting
+                styled_df = formatted_df.style.map(lambda x: highlight_bad_years(x), subset=selected_regions)
 
-            # Add download button for CSV
-            csv = formatted_df.to_csv(index=False).encode("utf-8")
-            st.download_button(
-                label="📥 Download Bad Years as CSV",
-                data=csv,
-                file_name=f"bad_years_comparison_{selected_season}_{selected_country}.csv",
-                mime="text/csv"
-            )
-        else:
-            st.success("✅ No bad years detected below the threshold!")
+                # Display the table
+                st.subheader("⚠️ Bad Years Detected Based on Hindcast Threshold Selection")
+                st.dataframe(styled_df.format({"Year": "{:.0f}"}))  # Ensure Year column has no comma formatting
 
 
         # Function to highlight bad years
