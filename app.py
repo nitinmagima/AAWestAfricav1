@@ -80,11 +80,11 @@ if data_dict:
         max_rainfall = max(selected_rainfall_values)
 
         # Add a toggle switch for threshold selection
-        use_threshold = st.checkbox("Enable Hindcast Threshold Selection", value=False)
+        use_threshold = st.checkbox("Enable Hindcast Rainfall Baseline Selection", value=False)
 
         # Show threshold slider only if enabled
         if use_threshold:
-            threshold = st.slider("🌧️ Set Hindcast Rainfall Threshold",
+            threshold = st.slider("🌧️ Set Hindcast Rainfall Baseline",
                                   min_value=float(min_rainfall),
                                   max_value=float(max_rainfall),
                                   value=float(min_rainfall))
@@ -107,7 +107,7 @@ if data_dict:
         if use_threshold:
             fig.add_trace(go.Scatter(
                 x=df["Year"], y=[threshold] * len(df),
-                mode="lines", name="Threshold",
+                mode="lines", name="Selected Rainfall Baseline for Bad Year",
                 line=dict(color="red", dash="dash")
             ))
 
@@ -163,7 +163,7 @@ if data_dict:
                 styled_df = formatted_df.style.map(lambda x: highlight_bad_years(x), subset=selected_regions)
 
                 # Display the table
-                st.subheader("⚠️ Bad Years Detected Based on Hindcast Threshold Selection")
+                st.subheader("⚠️ Bad Years Detected Based on Rainfall Hindcast Baseline Selection")
                 st.dataframe(styled_df.format({"Year": "{:.0f}"}))  # Ensure Year column has no comma formatting
 
 
@@ -231,8 +231,6 @@ if data_dict:
                 )
             else:
                 st.success(f"✅ No data found for the lowest {freq_percentage}% of rainfall values.")
-
-
 
 
 
