@@ -33,7 +33,7 @@ pip install streamlit pandas plotly
 Run the Streamlit app using:  
 
 ```bash
-streamlit run app.py
+streamlit run Single_Season_Rainfall_Hindcast_Analysis.py
 ```
 
 ---

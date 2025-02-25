@@ -24,7 +24,7 @@ def get_country_season_options(base_folder):
 countries, country_seasons = get_country_season_options(BASE_FOLDER)
 
 # Streamlit UI
-st.title("📈 AA West Africa - Rainfall Hindcast Multi-Region Bad Year Comparison")
+st.title("📈 AA West Africa - Single Season Rainfall Hindcast Multi-Region Bad Year Analysis")
 
 # Dropdown for country selection
 selected_country = st.selectbox("🌍 Select a Country", countries)
