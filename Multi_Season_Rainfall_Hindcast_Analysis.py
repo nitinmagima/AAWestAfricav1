@@ -3,9 +3,20 @@ import pandas as pd
 import os
 import plotly.graph_objects as go
 import datetime
+import json
 
 # Base data folder path
 BASE_FOLDER = "data"
+
+# Load translations from JSON file
+with open("translations.json", "r", encoding="utf-8") as file:
+    translations = json.load(file)
+
+# Sidebar: Language Selector
+selected_language = st.sidebar.selectbox("🌐 Select Language", list(translations.keys()))
+
+# Get selected language dictionary
+lang = translations[selected_language]
 
 # Define season-based colors
 season_colors = {
@@ -41,14 +52,14 @@ def get_country_season_options(base_folder):
 countries, country_seasons = get_country_season_options(BASE_FOLDER)
 
 # Streamlit UI
-st.title("📈 AA West Africa - Multi Season and Region Rainfall Hindcast Bad Year Analysis")
+st.title(lang["title"])
 
 # Dropdown for country selection
-selected_country = st.selectbox("🌍 Select a Country", countries)
+selected_country = st.selectbox(lang["select_country"], countries)
 
 # Multi-select dropdown for season selection
 available_seasons = country_seasons.get(selected_country, [])
-selected_seasons = st.multiselect("☀️ Select Seasons", available_seasons, default=available_seasons)
+selected_seasons = st.multiselect(lang["select_seasons"], available_seasons, default=available_seasons)
 
 # Function to load selected seasons for a country dynamically
 @st.cache_data
@@ -96,7 +107,7 @@ all_season_data = load_selected_seasons(selected_country, selected_seasons, BASE
 all_regions = {region for season in selected_seasons for region in all_season_data.get(season, {})}
 
 # Multi-select dropdown for regions
-selected_regions = st.multiselect("📍 Select Regions for Comparison", sorted(all_regions), default=list(all_regions)[:2])
+selected_regions = st.multiselect(lang["select_regions"], sorted(all_regions), default=list(all_regions)[:2])
 
 # Create data_dict dynamically
 data_dict = {f"{region} - {season}": all_season_data[season][region]
@@ -111,9 +122,9 @@ if selected_regions and selected_seasons and data_dict:
     min_rainfall, max_rainfall = min(selected_rainfall_values), max(selected_rainfall_values)
 
     # Threshold selection
-    use_threshold = st.checkbox("Enable Hindcast Rainfall Baseline Selection", value=False, key="threshold_toggle")
+    use_threshold = st.checkbox(lang["enable_threshold"], value=False, key="threshold_toggle")
     if use_threshold:
-        threshold = st.slider("🌧️ Set Hindcast Rainfall Baseline", float(min_rainfall), float(max_rainfall),
+        threshold = st.slider(lang["set_threshold"], float(min_rainfall), float(max_rainfall),
                               value=float(min_rainfall))
 
     st.write("")
@@ -131,9 +142,9 @@ if selected_regions and selected_seasons and data_dict:
                                  name="Selected Rainfall Baseline for Bad Year", line=dict(color="red", dash="dash")))
 
     # Update layout
-    fig.update_layout(title=f"Hindcast Rainfall for Selected Regions ({', '.join(selected_seasons)}, {selected_country})",
-                      xaxis=dict(title="Year", tickformat="d"),
-                      yaxis=dict(title="Rainfall (mm)", range=[min_rainfall * 0.9, max_rainfall * 1.1]),
+    fig.update_layout(title=f"{lang['hindcast_chart_title']} ({', '.join(selected_seasons)}, {selected_country})",
+                      xaxis=dict(title=lang["year"], tickformat="d"),
+                      yaxis=dict(title=lang["rainfall_mm"], range=[min_rainfall * 0.9, max_rainfall * 1.1]),
                       hovermode="x", template="plotly_white")
 
     st.plotly_chart(fig, use_container_width=True)
@@ -162,14 +173,14 @@ if selected_regions and selected_seasons and data_dict:
             )
 
             # Display styled DataFrame
-            st.header("Bad Years Analysis Based on Rainfall Hindcast Baseline Selection")
+            st.header(lang["threshold_analysis"])
             st.dataframe(styled_df.format({"Year": "{:.0f}"}))
 
 # User selects the frequency for bad years
 st.write("")
 st.markdown("---")
 st.write("")
-st.header("Bad Years Analysis Based on Lowest Percentage of Rainfall Frequency Selection")
+st.header(lang["freq_analysis"])
 
 if selected_regions and selected_seasons:
     all_bad_years = {}
@@ -189,10 +200,10 @@ if selected_regions and selected_seasons:
 
     # Ensure valid year range (handle no data case)
     if min_year == float('inf') or max_year == float('-inf'):
-        st.warning("No data found for the selected regions and seasons.")
+        st.warning(lang["bad_years_msg"])
     else:
         # Step 2: Year Range Slider (User selects which years to analyze)
-        year_range = st.slider("📅 Select Year Range", min_value=int(min_year), max_value=int(max_year),
+        year_range = st.slider(lang["year_range"], min_value=int(min_year), max_value=int(max_year),
                                value=(int(min_year), int(max_year)))
 
         # Step 3: Filter data based on selected year range
@@ -208,7 +219,7 @@ if selected_regions and selected_seasons:
                         filtered_data[col_name] = df_filtered  # Store filtered data
 
         # Step 4: Frequency Slider (Now apply percentage selection on the filtered dataset)
-        freq_percentage = st.slider("📉 Select Lowest Percentage of Rainfall Years", 5, 50, 10, step=5)
+        freq_percentage = st.slider(lang["freq_percentage"], 5, 50, 10, step=5)
 
         # Step 5: Process the filtered dataset
         for col_name, df_filtered in filtered_data.items():
@@ -232,6 +243,87 @@ if selected_regions and selected_seasons:
                 lambda x: [highlight_seasonal_bad_years(v, c) for v, c in zip(x, formatted_df.columns)], axis=1
             )
 
-            st.subheader(f"Bad Years Based on {freq_percentage}% Lowest Rainfall (Filtered by Year Range: {year_range[0]} - {year_range[1]})")
+            st.subheader(f"{lang['bad_years_table']} - {freq_percentage}% : {year_range[0]} - {year_range[1]}")
             st.dataframe(styled_df.format({"Year": "{:.0f}"}))
+
+        # Multi-Select Dropdown for Year Selection
+        # User selects the frequency for bad years
+        st.write("")
+        st.markdown("---")
+        st.write("")
+        st.header(lang["historical_analysis"])
+
+        # Step 6: Multi-Select Dropdown for Year Selection Based on Dataset Range
+        # Ensure valid years exist before proceeding
+        if min_year != float('inf') and max_year != float('-inf'):
+            year_options = list(range(int(year_range[0]), int(year_range[1]) + 1))  # Generate full year range
+
+            selected_years = st.multiselect(
+                lang["historical_loss_select"], year_options, default=[]  # Default to none selected
+            )
+
+            # Step 7: Compute Percentage of Selected Years That Are Bad Years
+            if selected_years:
+                selected_years_percentages = {}
+
+                # Ensure we have valid bad years to analyze
+                if all_bad_years and selected_years:
+                    total_selected_years = len(selected_years)  # 🔹 Total number of selected years
+
+                    # Loop through all selected columns (region-season combinations)
+                    for col_name in set(
+                            k for v in all_bad_years.values() for k in v.keys()):  # Dynamically get column names
+                        # Count how many selected years are bad years for this column
+                        selected_bad_years = sum(
+                            1 for year in selected_years if year in all_bad_years and col_name in all_bad_years[year]
+                        )
+
+                        # Compute percentage relative to selected years
+                        if total_selected_years > 0:
+                            selected_years_percentages[col_name] = (selected_bad_years / total_selected_years) * 100
+                        else:
+                            selected_years_percentages[col_name] = 0  # If no selected years, set 0%
+
+                # 🔹 Visualization: Horizontal Bar Chart
+                if selected_years_percentages and any(
+                        v > 0 for v in selected_years_percentages.values()):  # Ensure valid data
+                    # Sort data for better visualization
+                    sorted_data = sorted(selected_years_percentages.items(), key=lambda x: x[1], reverse=True)
+                    labels, values = zip(*sorted_data)  # Extract column names & percentages
+
+                    # Create Plotly bar chart
+                    fig = go.Figure(go.Bar(
+                        x=values,  # Percentages
+                        y=labels,  # Column Names
+                        orientation="h",  # Horizontal bar chart
+                        marker=dict(
+                            color=values,  # Dynamic color based on value
+                            colorscale="blues",  # Color gradient (light to dark blue)
+                            showscale=True  # Show color scale
+                        ),
+                        text=[f"{v:.2f}%" for v in values],  # Show percentage on bars
+                        textposition="outside"  # Place labels outside bars
+                    ))
+
+                    fig.update_layout(
+                        title=lang["graph_title"],  # 🔹 Localized title
+                        xaxis_title=lang["xaxis_title"],  # 🔹 Localized x-axis label
+                        yaxis_title=lang["yaxis_title"],  # 🔹 Localized y-axis label
+                        xaxis=dict(range=[0, 100]),  # 🔹 Force x-axis from 0% to 100%
+                        yaxis=dict(categoryorder="total ascending"),  # Sort bars by value
+                        height=600,  # Adjust height for readability
+                    )
+
+                    # Display chart
+                    st.plotly_chart(fig, use_container_width=True)
+                else:
+                    st.warning(lang["bad_years_msg_historical"])
+            else:
+                st.info(lang["bad_years_msg_percent"])
+
+
+
+
+
+
 
