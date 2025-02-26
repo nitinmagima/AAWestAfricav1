@@ -26,13 +26,23 @@ season_colors = {
     " JJASO": "#FFD700"  # Gold
 }
 
+# Define a new color for Selected Historical Loss Years
+historical_loss_color = "#FFA500"  # Orange
 
-# Function to highlight bad years based on season
+
+# Function to highlight bad years based on season and historical selection
 def highlight_seasonal_bad_years(val, col):
+    # 🔹 Check if this is the "Selected Historical Loss Years" column
+    if col == "Selected Historical Loss Years" and val == "Yes":
+        return f"background-color: {historical_loss_color}; color: black; font-weight: bold;"
+
+    # 🔹 Otherwise, apply season-based highlighting
     for season, color in season_colors.items():
         if col.endswith(season) and val == "Yes":  # Ensure exact match
             return f"background-color: {color}; color: black; font-weight: bold;"
-    return ""
+
+    return ""  # Default (no styling)
+
 
 # Function to get available countries and seasons dynamically
 def get_country_season_options(base_folder):
@@ -180,7 +190,7 @@ if selected_regions and selected_seasons and data_dict:
 st.write("")
 st.markdown("---")
 st.write("")
-st.header(lang["freq_analysis"])
+st.header(f"{lang["freq_analysis"]} - ({', '.join(selected_seasons)}, {selected_country})")
 
 if selected_regions and selected_seasons:
     all_bad_years = {}
@@ -221,6 +231,14 @@ if selected_regions and selected_seasons:
         # Step 4: Frequency Slider (Now apply percentage selection on the filtered dataset)
         freq_percentage = st.slider(lang["freq_percentage"], 5, 50, 10, step=5)
 
+        # Step 6: Multi-Select Dropdown for Year Selection Based on Dataset Range
+        # Ensure valid years exist before proceeding
+        year_options = list(range(int(year_range[0]), int(year_range[1]) + 1))  # Generate full year range
+
+        selected_years = st.multiselect(
+            lang["historical_loss_select"], year_options, default=[]  # Default to none selected
+        )
+
         # Step 5: Process the filtered dataset
         for col_name, df_filtered in filtered_data.items():
             df_sorted = df_filtered.sort_values(by="Rainfall")
@@ -232,94 +250,97 @@ if selected_regions and selected_seasons:
                     all_bad_years[year] = {}
                 all_bad_years[year][col_name] = "Yes"
 
-        if all_bad_years:
-            formatted_df = pd.DataFrame({"Year": sorted(all_bad_years.keys())})
+        # 🔹 Step 7: Ensure Historical Loss Years Appear in the "Year" Column
+        all_years = set(all_bad_years.keys())  # Get all detected bad years
+        all_years.update(selected_years)  # Add selected historical loss years
+        sorted_all_years = sorted(all_years)  # Ensure sorting
 
-            for col_name in filtered_data.keys():
-                formatted_df[col_name] = formatted_df["Year"].apply(lambda y: all_bad_years.get(y, {}).get(col_name, ""))
+        formatted_df = pd.DataFrame({"Year": sorted_all_years})  # Include both bad years & historical loss years
 
-            # Highlight bad years based on their season
-            styled_df = formatted_df.style.apply(
-                lambda x: [highlight_seasonal_bad_years(v, c) for v, c in zip(x, formatted_df.columns)], axis=1
+        # Add bad year values per column
+        for col_name in filtered_data.keys():
+            formatted_df[col_name] = formatted_df["Year"].apply(
+                lambda y: all_bad_years.get(y, {}).get(col_name, "")
             )
 
-            st.subheader(f"{lang['bad_years_table']} - {freq_percentage}% : {year_range[0]} - {year_range[1]}")
-            st.dataframe(styled_df.format({"Year": "{:.0f}"}))
+        # 🔹 Step 8: Add "Selected Historical Loss Years" Column
+        formatted_df["Selected Historical Loss Years"] = formatted_df["Year"].apply(
+            lambda y: "Yes" if y in selected_years else ""
+        )
 
-        # Multi-Select Dropdown for Year Selection
-        # User selects the frequency for bad years
-        st.write("")
-        st.markdown("---")
-        st.write("")
-        st.header(lang["historical_analysis"])
+        # Highlight bad years based on their season
+        styled_df = formatted_df.style.apply(
+            lambda x: [highlight_seasonal_bad_years(v, c) for v, c in zip(x, formatted_df.columns)], axis=1
+        )
 
-        # Step 6: Multi-Select Dropdown for Year Selection Based on Dataset Range
-        # Ensure valid years exist before proceeding
-        if min_year != float('inf') and max_year != float('-inf'):
-            year_options = list(range(int(year_range[0]), int(year_range[1]) + 1))  # Generate full year range
+        st.subheader(f"{lang['bad_years_table']} - {freq_percentage}% : {year_range[0]} - {year_range[1]} ({', '.join(selected_seasons)}, {selected_country})")
+        st.dataframe(styled_df.format({"Year": "{:.0f}"}))
 
-            selected_years = st.multiselect(
-                lang["historical_loss_select"], year_options, default=[]  # Default to none selected
-            )
+            # # Multi-Select Dropdown for Year Selection
+        # # User selects the frequency for bad years
+        # st.write("")
+        # st.markdown("---")
+        # st.write("")
+        # st.header(lang["historical_analysis"])
 
-            # Step 7: Compute Percentage of Selected Years That Are Bad Years
-            if selected_years:
-                selected_years_percentages = {}
+        # Step 7: Compute Percentage of Selected Years That Are Bad Years
+        if selected_years:
+            selected_years_percentages = {}
 
-                # Ensure we have valid bad years to analyze
-                if all_bad_years and selected_years:
-                    total_selected_years = len(selected_years)  # 🔹 Total number of selected years
+            # Ensure we have valid bad years to analyze
+            if all_bad_years and selected_years:
+                total_selected_years = len(selected_years)  # 🔹 Total number of selected years
 
-                    # Loop through all selected columns (region-season combinations)
-                    for col_name in set(
-                            k for v in all_bad_years.values() for k in v.keys()):  # Dynamically get column names
-                        # Count how many selected years are bad years for this column
-                        selected_bad_years = sum(
-                            1 for year in selected_years if year in all_bad_years and col_name in all_bad_years[year]
-                        )
-
-                        # Compute percentage relative to selected years
-                        if total_selected_years > 0:
-                            selected_years_percentages[col_name] = (selected_bad_years / total_selected_years) * 100
-                        else:
-                            selected_years_percentages[col_name] = 0  # If no selected years, set 0%
-
-                # 🔹 Visualization: Horizontal Bar Chart
-                if selected_years_percentages and any(
-                        v > 0 for v in selected_years_percentages.values()):  # Ensure valid data
-                    # Sort data for better visualization
-                    sorted_data = sorted(selected_years_percentages.items(), key=lambda x: x[1], reverse=True)
-                    labels, values = zip(*sorted_data)  # Extract column names & percentages
-
-                    # Create Plotly bar chart
-                    fig = go.Figure(go.Bar(
-                        x=values,  # Percentages
-                        y=labels,  # Column Names
-                        orientation="h",  # Horizontal bar chart
-                        marker=dict(
-                            color=values,  # Dynamic color based on value
-                            colorscale="blues",  # Color gradient (light to dark blue)
-                            showscale=True  # Show color scale
-                        ),
-                        text=[f"{v:.2f}%" for v in values],  # Show percentage on bars
-                        textposition="outside"  # Place labels outside bars
-                    ))
-
-                    fig.update_layout(
-                        title=lang["graph_title"],  # 🔹 Localized title
-                        xaxis_title=lang["xaxis_title"],  # 🔹 Localized x-axis label
-                        yaxis_title=lang["yaxis_title"],  # 🔹 Localized y-axis label
-                        xaxis=dict(range=[0, 100]),  # 🔹 Force x-axis from 0% to 100%
-                        yaxis=dict(categoryorder="total ascending"),  # Sort bars by value
-                        height=600,  # Adjust height for readability
+                # Loop through all selected columns (region-season combinations)
+                for col_name in set(
+                        k for v in all_bad_years.values() for k in v.keys()):  # Dynamically get column names
+                    # Count how many selected years are bad years for this column
+                    selected_bad_years = sum(
+                        1 for year in selected_years if year in all_bad_years and col_name in all_bad_years[year]
                     )
 
-                    # Display chart
-                    st.plotly_chart(fig, use_container_width=True)
-                else:
-                    st.warning(lang["bad_years_msg_historical"])
+                    # Compute percentage relative to selected years
+                    if total_selected_years > 0:
+                        selected_years_percentages[col_name] = (selected_bad_years / total_selected_years) * 100
+                    else:
+                        selected_years_percentages[col_name] = 0  # If no selected years, set 0%
+
+            # 🔹 Visualization: Horizontal Bar Chart
+            if selected_years_percentages and any(
+                    v > 0 for v in selected_years_percentages.values()):  # Ensure valid data
+                # Sort data for better visualization
+                sorted_data = sorted(selected_years_percentages.items(), key=lambda x: x[1], reverse=True)
+                labels, values = zip(*sorted_data)  # Extract column names & percentages
+
+                # Create Plotly bar chart
+                fig = go.Figure(go.Bar(
+                    x=values,  # Percentages
+                    y=labels,  # Column Names
+                    orientation="h",  # Horizontal bar chart
+                    marker=dict(
+                        color=values,  # Dynamic color based on value
+                        colorscale="blues",  # Color gradient (light to dark blue)
+                        showscale=True  # Show color scale
+                    ),
+                    text=[f"{v:.2f}%" for v in values],  # Show percentage on bars
+                    textposition="outside"  # Place labels outside bars
+                ))
+
+                fig.update_layout(
+                    title=lang["graph_title"],  # 🔹 Localized title
+                    xaxis_title=lang["xaxis_title"],  # 🔹 Localized x-axis label
+                    yaxis_title=lang["yaxis_title"],  # 🔹 Localized y-axis label
+                    xaxis=dict(range=[0, 100]),  # 🔹 Force x-axis from 0% to 100%
+                    yaxis=dict(categoryorder="total ascending"),  # Sort bars by value
+                    height=600,  # Adjust height for readability
+                )
+
+                # Display chart
+                st.plotly_chart(fig, use_container_width=True)
             else:
-                st.info(lang["bad_years_msg_percent"])
+                st.warning(lang["bad_years_msg_historical"])
+        else:
+            st.info(lang["bad_years_msg_percent"])
 
 
 

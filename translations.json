@@ -14,7 +14,7 @@
         "bad_years_table": "Detected Bad Years",
         "year": "Year",
         "rainfall_mm": "Rainfall (mm)",
-        "hindcast_chart_title": "Hindcast Rainfall for Selected Regions)",
+        "hindcast_chart_title": "Hindcast Rainfall for Selected Regions",
         "historical_analysis": "Analyze Detected Bad Years Against Historical Loss Years",
         "graph_title": "📊 Percentage of Selected Historical Loss Years Captured in Detected Bad Years",
         "xaxis_title": "Captured Percentage (%)",
