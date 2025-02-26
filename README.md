@@ -17,6 +17,9 @@ This **Streamlit web app** allows users to **analyze and compare hindcast rainfa
 ✅ **Formatted Bad Years Table** – Years below the threshold are marked.  
 ✅ **Frequency-Based Bad Year Selection** – Sorts rainfall values and allows users to select the lowest X% of years.
 ✅ **CSV Download Option** – Export bad years for further analysis.  
+✅ **Multi-language Support** – Switch between English, Spanish, and French.
+✅ **Historical Loss Years Analysis** - Analyze Detected Bad Years Against Historical Loss Years"
+
 
 ---
 
